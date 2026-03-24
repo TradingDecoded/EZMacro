@@ -18,7 +18,7 @@ function EZMacro:ShowMainFrame()
         mainFrame = AceGUI:Create("Frame")
         mainFrame:SetTitle("EZMacro")
         mainFrame:SetStatusText("EZMacro v" .. self.Version)
-        mainFrame:SetWidth(500)
+        mainFrame:SetWidth(600)
         mainFrame:SetHeight(450)
         mainFrame:SetLayout("Fill")
         mainFrame.frame:SetFrameStrata("MEDIUM")
@@ -84,12 +84,50 @@ function EZMacro:AddMacroRow(parent, name, data)
         labelText = labelText .. "  |cFF888888[unbound]|r"
     end
     label:SetText(labelText)
-    label:SetWidth(220)
+    label:SetWidth(160)
     row:AddChild(label)
+
+    if data.talentLoadout then
+        local loadBtn = AceGUI:Create("Button")
+        loadBtn:SetText("Load Build")
+        loadBtn:SetWidth(100)
+        loadBtn:SetCallback("OnClick", function()
+            if InCombatLockdown() then
+                EZMacro:Print("Cannot load build during combat.")
+                return
+            end
+            -- Warn on class/spec mismatch
+            local _, _, playerClassID = UnitClass("player")
+            if data.classID and data.classID > 0 and data.classID ~= playerClassID then
+                EZMacro:Print("|cFFFF8800Warning: This build is for a different class.|r")
+            end
+            local specIndex = GetSpecialization()
+            local playerSpecID = specIndex and GetSpecializationInfo(specIndex) or nil
+            if data.specID and playerSpecID and data.specID ~= playerSpecID then
+                EZMacro:Print("|cFFFF8800Warning: This build is for a different specialization.|r")
+            end
+            -- Open talent UI with the build pre-filled
+            local loaded = C_AddOns.LoadAddOn("Blizzard_PlayerSpells")
+            if loaded and PlayerSpellsFrame and PlayerSpellsFrame.TalentsFrame then
+                if not PlayerSpellsFrame:IsShown() then
+                    TogglePlayerSpellsFrame()
+                end
+                local success = PlayerSpellsFrame.TalentsFrame:LoadLoadout(data.talentLoadout)
+                if success then
+                    EZMacro:Print("Talent build loaded — review and click Apply.")
+                else
+                    EZMacro:Print("|cFFFF0000Failed to load talent build. It may be for a different spec.|r")
+                end
+            else
+                EZMacro:Print("|cFFFF0000Could not open talent frame.|r")
+            end
+        end)
+        row:AddChild(loadBtn)
+    end
 
     local bindBtn = AceGUI:Create("Button")
     bindBtn:SetText("Bind Key")
-    bindBtn:SetWidth(80)
+    bindBtn:SetWidth(90)
     bindBtn:SetCallback("OnClick", function()
         if InCombatLockdown() then
             EZMacro:Print("Cannot bind keys during combat.")
@@ -101,7 +139,7 @@ function EZMacro:AddMacroRow(parent, name, data)
 
     local deleteBtn = AceGUI:Create("Button")
     deleteBtn:SetText("Delete")
-    deleteBtn:SetWidth(70)
+    deleteBtn:SetWidth(80)
     deleteBtn:SetCallback("OnClick", function()
         if InCombatLockdown() then
             EZMacro:Print("Cannot delete during combat.")
