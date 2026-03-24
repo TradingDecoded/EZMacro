@@ -10,6 +10,7 @@ embeds.xml
 
 Core\Init.lua
 Core\Decoder.lua
+Core\Encoder.lua
 Core\Engine.lua
 Validation\TalentCheck.lua
 UI\MainFrame.lua
