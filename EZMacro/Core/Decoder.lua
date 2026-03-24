@@ -24,6 +24,62 @@ function EZMacro:DecodeGSEString(data)
     return true, result
 end
 
+--- Parse a raw Lua step table string into an actual table.
+-- Accepts the format: { [1] = { ["macrotext"] = "...", ["type"] = "macro" }, ... }
+-- @param input string The raw Lua table code
+-- @return boolean success
+-- @return table|string result or error message
+function EZMacro:ParseLuaStepTable(input)
+    -- Wrap in a return statement so loadstring can evaluate it
+    local code = "return " .. input
+    local fn, err = loadstring(code)
+    if not fn then
+        return false, "Invalid Lua syntax: " .. tostring(err)
+    end
+    -- Execute in a sandboxed environment with no access to global functions
+    setfenv(fn, {})
+    local ok, result = pcall(fn)
+    if not ok then
+        return false, "Failed to evaluate: " .. tostring(result)
+    end
+    if type(result) ~= "table" then
+        return false, "Expected a table, got " .. type(result)
+    end
+    -- Validate it looks like a step table: array of tables with macrotext and type
+    if not result[1] or type(result[1]) ~= "table" then
+        return false, "Expected an array of step tables"
+    end
+    if not result[1].macrotext and not result[1].spell then
+        return false, "Steps must have 'macrotext' or 'spell' fields"
+    end
+    return true, result
+end
+
+--- Import a raw Lua step table as a macro with the given name.
+-- @param name string The macro name
+-- @param input string The raw Lua table code
+-- @return boolean success
+-- @return string message
+function EZMacro:ImportLuaTable(name, input)
+    local ok, steps = self:ParseLuaStepTable(input)
+    if not ok then
+        return false, steps
+    end
+
+    -- Store as a pre-compiled macro (no GSE sequence structure, just raw steps)
+    local existing = EZMacro_CharDB.macros[name]
+    EZMacro_CharDB.macros[name] = {
+        sequence = nil,
+        compiledSteps = steps,  -- pre-compiled step table, used directly by Engine
+        classID = 0,
+        keybind = existing and existing.keybind or nil,
+        source = input,
+        warnings = {},
+    }
+
+    return true, "Imported macro: " .. name
+end
+
 --- Import a GSE string, storing decoded macros into EZMacro_CharDB.
 -- @param inputString string The raw pasted string
 -- @return boolean success

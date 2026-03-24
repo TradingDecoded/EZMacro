@@ -43,7 +43,7 @@ function EZMacro:ValidateMacro(macroName, data)
         end
     end
 
-    local steps = self:CompileSequence(data.sequence)
+    local steps = self:GetStepsForMacro(data)
     local spells = self:ExtractSpells(steps)
     for _, spellName in ipairs(spells) do
         local spellInfo = C_Spell.GetSpellInfo(spellName)

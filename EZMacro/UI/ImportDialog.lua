@@ -10,7 +10,7 @@ function EZMacro:ShowImportDialog()
         importFrame = AceGUI:Create("Frame")
         importFrame:SetTitle("EZMacro: Import")
         importFrame:SetWidth(500)
-        importFrame:SetHeight(400)
+        importFrame:SetHeight(450)
         importFrame:SetLayout("List")
         importFrame.frame:SetFrameStrata("HIGH")
         importFrame.frame:SetClampedToScreen(true)
@@ -20,13 +20,19 @@ function EZMacro:ShowImportDialog()
     end
 
     local desc = AceGUI:Create("Label")
-    desc:SetText("Paste a GSE macro string below and click Import.")
+    desc:SetText("Paste a GSE macro string OR a raw Lua step table below.\nFor Lua tables, enter a macro name first.")
     desc:SetFullWidth(true)
     importFrame:AddChild(desc)
 
+    -- Macro name field (needed for raw Lua imports, optional for GSE strings)
+    local nameBox = AceGUI:Create("EditBox")
+    nameBox:SetLabel("Macro Name (required for Lua tables)")
+    nameBox:SetFullWidth(true)
+    importFrame:AddChild(nameBox)
+
     local editBox = AceGUI:Create("MultiLineEditBox")
-    editBox:SetLabel("GSE Macro String")
-    editBox:SetNumLines(15)
+    editBox:SetLabel("GSE String or Lua Step Table")
+    editBox:SetNumLines(13)
     editBox:SetFullWidth(true)
     editBox:DisableButton(true)
     importFrame:AddChild(editBox)
@@ -41,11 +47,27 @@ function EZMacro:ShowImportDialog()
     importBtn:SetCallback("OnClick", function()
         local text = editBox:GetText()
         if not text or strtrim(text) == "" then
-            EZMacro:Print("Nothing to import -- paste a GSE string first.")
+            EZMacro:Print("Nothing to import -- paste something first.")
+            return
+        end
+        text = strtrim(text)
+
+        local ok, msg
+        -- Detect format: GSE strings start with !GSE3!, Lua tables start with {
+        if text:sub(1, 5) == "!GSE3" then
+            ok, msg = EZMacro:ImportString(text)
+        elseif text:sub(1, 1) == "{" then
+            local name = strtrim(nameBox:GetText() or "")
+            if name == "" then
+                EZMacro:Print("|cFFFF0000Enter a macro name for Lua table imports.|r")
+                return
+            end
+            ok, msg = EZMacro:ImportLuaTable(name, text)
+        else
+            EZMacro:Print("|cFFFF0000Unrecognized format. Paste a !GSE3! string or a Lua table starting with {|r")
             return
         end
 
-        local ok, msg = EZMacro:ImportString(strtrim(text))
         if ok then
             EZMacro:Print("|cFF00FF00" .. msg .. "|r")
             EZMacro:QueueAction(function()

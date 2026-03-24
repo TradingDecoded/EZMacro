@@ -246,11 +246,21 @@ function EZMacro:RestoreKeybinds()
     end
 end
 
+--- Get the compiled steps for a macro, either pre-compiled (raw Lua import) or by compiling the GSE sequence.
+function EZMacro:GetStepsForMacro(data)
+    if data.compiledSteps then
+        return data.compiledSteps
+    elseif data.sequence then
+        return self:CompileSequence(data.sequence)
+    end
+    return {}
+end
+
 --- Create buttons for all stored macros. Called on PLAYER_ENTERING_WORLD.
 function EZMacro:InitializeButtons()
     if InCombatLockdown() then return end
     for name, data in pairs(EZMacro_CharDB.macros) do
-        local steps = self:CompileSequence(data.sequence)
+        local steps = self:GetStepsForMacro(data)
         self:CreateButton(name, steps)
     end
 end
