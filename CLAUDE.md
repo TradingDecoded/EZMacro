@@ -4,51 +4,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-EZMacro is a World of Warcraft addon that aims to be a simplified alternative to GSE (GnomeSequencer-Enhanced). The goal is to let normal, non-technical players:
+EZMacro is a World of Warcraft addon — a simplified alternative to GSE (GnomeSequencer-Enhanced). It lets players:
 
-1. **Import GSE macro strings** — parse and use existing GSE-format macro sequences
-2. **Import WoW talent builds** — load talent build strings
-3. **Bind to a key** — simple one-click key binding for imported macros
+1. **Import GSE macro strings** (`!GSE3!` encoded) or **raw Lua step tables**
+2. **Validate talents** — warns when imported macros reference spells the player doesn't know
+3. **Bind to a key** — simple one-click key binding with persistence across sessions
 
-The full GSE addon source (v3.3.08 by TimothyLuke) is included under `old-addon/` as a reference implementation.
+**GitHub:** https://github.com/TradingDecoded/EZMacro
+**Target:** Retail WoW only (Interface 120001+, TWW/Midnight)
 
-## WoW Addon Development
+## EZMacro Architecture
 
-- **Language:** Lua (WoW uses Lua 5.1)
-- **Entry point:** `.toc` files define addon metadata, dependencies, and file load order
-- **Saved data:** `SavedVariables` in TOC persist data between sessions (stored by WoW client)
-- **UI framework:** XML-defined frames or Lua-created frames; WoW provides its own widget API
-- **No external build tools** — WoW loads addons directly from the `Interface/AddOns/` directory
+Single addon, Ace3 framework (AceAddon, AceConsole, AceEvent, AceGUI, AceTimer).
 
-## GSE Reference Architecture (`old-addon/`)
+```
+EZMacro/
+├── EZMacro.toc            # Addon descriptor, Interface 120001
+├── embeds.xml             # Ace3 library load manifest
+├── Libs/                  # Ace3 subset (LibStub, CallbackHandler, AceAddon/Console/Event/GUI/Timer)
+├── Core/
+│   ├── Init.lua           # AceAddon bootstrap, slash commands (/ezm), event wiring, combat lockdown
+│   ├── Decoder.lua        # GSE string decode (C_EncodingUtil) + raw Lua table import (loadstring sandboxed)
+│   └── Engine.lua         # SecureActionButton creation, step compilation, WrapScript execution, keybinds
+├── UI/
+│   ├── MainFrame.lua      # Main panel: macro list with Bind/Delete buttons
+│   ├── ImportDialog.lua   # Paste box with auto-detect (GSE string vs Lua table)
+│   └── KeyBindDialog.lua  # AceGUI Keybinding widget capture dialog
+└── Validation/
+    └── TalentCheck.lua    # Spell extraction from steps, IsSpellKnown/IsPlayerSpell checks
+```
 
-GSE is split into 5 addon modules that load via dependency chain:
+### Data flow
 
-| Module | Purpose | Load |
-|--------|---------|------|
-| `GSE/` | Core API — init, storage, serialization, events, string/character functions | Always |
-| `GSE_GUI/` | Editor UI — import/export, macro editor, keybind editor, recorder | On demand |
-| `GSE_Utils/` | Utilities — minimap icon, shared media, tracker, popups | Always |
-| `GSE_Options/` | Settings panel | Depends on GSE_Utils |
-| `GSE_LDB/` | LibDataBroker minimap feed | Depends on GSE + GSE_Utils |
+1. **Import:** Paste `!GSE3!` string or Lua step table → Decoder parses → stored in `EZMacro_CharDB.macros[name]`
+2. **Compile:** Engine selects Default version from GSE sequence → flattens actions to step table `{type="macro", macrotext="..."}`
+   - Raw Lua imports skip compilation (already in step format, stored as `compiledSteps`)
+3. **Execute:** SecureActionButton with WrapScript OnClick cycles through steps on each keypress
+4. **Bind:** `SetBindingClick(key, buttonName, "LeftButton")` — re-applied on every login via PLAYER_ENTERING_WORLD
 
-### Key GSE internals
+### SavedVariables
 
-- **Ace3 framework** — AceAddon, AceConsole, AceGUI, AceEvent, AceComm, AceTimer, AceLocale via LibStub
-- **Serialization format:** `!GSE3!` + Base64(Compress(CBOR(lua_table))) using `C_EncodingUtil` (WoW 11.x+ API)
-- **Decode flow:** strip `!GSE3!` prefix → DecodeBase64 → DecompressString → DeserializeCBOR → Lua table
-- **Storage:** Sequences stored compressed in `GSESequences[classID][name]`, lazily decompressed into `GSE.Library[classID][name]`
-- **Import flow:** paste string → `GSE.DecodeMessage()` → if type is `COLLECTION`, show checkboxes for sequences/variables/macros → `GSE.ImportSerialisedSequence()`
-- **Macro execution:** GSE creates WoW macro buttons that cycle through spell sequences on each keypress
+- `EZMacro_GlobalDB` (global) — addon options
+- `EZMacro_CharDB` (per-character) — imported macros, keybinds, warnings
 
-### Key files for understanding import/export
+### Critical: Restricted Environment Rules
 
-- `GSE/API/Serialisation.lua` — `EncodeMessage()` / `DecodeMessage()` encode/decode protocol
-- `GSE/API/Storage.lua` — sequence storage, lazy loading, migration
-- `GSE_GUI/Import.lua` — import UI and collection processing
-- `GSE_GUI/Export.lua` — export UI
-- `GSE/API/Events.lua` — WoW event handling and macro button creation
+The SecureActionButton WrapScript runs in WoW's restricted Lua sandbox:
+- Variables in `Execute()` must NOT be `local` — use globals so WrapScript can access them
+- `WrapScript` stacks (doesn't replace) — only call once on button creation
+- Valid button types: `spell`, `item`, `macro`, `action`, `click` — use `type="macro"` with `macrotext`
+- Use long-bracket strings `[=======[...]=======]` for embedding macro text in Execute() code
+- `newtable()` and `pairs()` are available in the restricted environment
 
-### Supported WoW versions
+## GSE Reference (`old-addon/`)
 
-Interface: 11508 (Classic), 20505 (SoD), 50503 (WoD), 120001 (TWW/Midnight)
+The full GSE addon source (v3.3.08) is in `old-addon/` for reference (gitignored).
+
+- **Serialization:** `!GSE3!` + Base64(Compress(CBOR(table))) via `C_EncodingUtil`
+- **Key files:** `GSE/API/Serialisation.lua` (encode/decode), `GSE/API/Storage.lua` (compilation, buttons, WrapScript)
+
+## Development
+
+- **Language:** Lua 5.1 (WoW runtime)
+- **No build tools** — copy `EZMacro/` to WoW's `Interface/AddOns/` and `/reload`
+- **No unit tests** — WoW addons require the live client for testing
+- **Slash commands:** `/ezm` (toggle UI), `/ezm import`, `/ezm list`, `/ezm reset`
