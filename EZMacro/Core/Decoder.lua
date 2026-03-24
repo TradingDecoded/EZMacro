@@ -146,3 +146,73 @@ function EZMacro:StoreSequence(name, sequence, source)
         warnings = {},
     }
 end
+
+--- Decode an !EZM!-prefixed string into a payload table.
+-- @param data string The !EZM!-prefixed encoded string
+-- @return boolean success
+-- @return table|string payload or error message
+function EZMacro:DecodeEZMString(data)
+    if type(data) ~= "string" then
+        return false, "Input must be a string"
+    end
+    data = strtrim(data)
+    if data:sub(1, 5) ~= "!EZM!" then
+        return false, "Not a valid EZM string (missing !EZM! prefix)"
+    end
+    local ok, result = pcall(function()
+        local encoded = data:sub(6)
+        local decoded = C_EncodingUtil.DecodeBase64(encoded)
+        local decompressed = C_EncodingUtil.DecompressString(decoded)
+        return C_EncodingUtil.DeserializeCBOR(decompressed)
+    end)
+    if not ok then
+        return false, "Failed to decode: " .. tostring(result)
+    end
+    if type(result) ~= "table" then
+        return false, "Decoded data is not a table"
+    end
+    if result.formatVersion and result.formatVersion > 1 then
+        return false, "This macro requires a newer version of EZMacro. Please update."
+    end
+    return true, result
+end
+
+--- Import an !EZM! string, storing the macro into EZMacro_CharDB.
+-- @param inputString string The raw pasted !EZM! string
+-- @return boolean success
+-- @return string message
+function EZMacro:ImportEZMString(inputString)
+    local ok, payload = self:DecodeEZMString(inputString)
+    if not ok then
+        return false, payload
+    end
+
+    local name = payload.name
+    if not name or name == "" then
+        return false, "EZM string has no macro name"
+    end
+
+    if not payload.steps or #payload.steps == 0 then
+        return false, "EZM string has no macro steps"
+    end
+
+    -- Warn on class mismatch but still import
+    local _, _, playerClassID = UnitClass("player")
+    if payload.classID and payload.classID > 0 and payload.classID ~= playerClassID then
+        self:Print("|cFFFF8800Warning: This macro was created for a different class.|r")
+    end
+
+    local existing = EZMacro_CharDB.macros[name]
+    EZMacro_CharDB.macros[name] = {
+        sequence = nil,
+        compiledSteps = payload.steps,
+        classID = payload.classID or 0,
+        specID = payload.specID,
+        keybind = existing and existing.keybind or nil,
+        source = inputString,
+        warnings = {},
+        talentLoadout = payload.talentLoadout,
+    }
+
+    return true, "Imported macro: " .. name
+end
