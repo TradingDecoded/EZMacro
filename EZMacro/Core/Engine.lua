@@ -48,7 +48,7 @@ function EZMacro:CompileSequence(sequence)
     if #steps == 0 and type(version) == "table" then
         for i = 1, #version do
             if type(version[i]) == "string" then
-                steps[#steps + 1] = { type = "macrotext", macrotext = version[i] }
+                steps[#steps + 1] = { type = "macro", macrotext = version[i] }
             end
         end
     end
@@ -57,27 +57,28 @@ function EZMacro:CompileSequence(sequence)
 end
 
 --- Compile a single action block into one or more steps.
+-- Output format matches GSE's compiled output:
+-- {type="macro", macrotext="/cast Spell\n/cast Spell2", blockPath="1"}
+-- WoW SecureActionButton uses type="macro" + macrotext to execute macro commands.
 function EZMacro:CompileAction(action)
     local steps = {}
     local actionType = action.Type or "Action"
 
     if actionType == "Action" then
-        local attrs = {}
+        local macrotext = nil
         if action.macrotext then
-            attrs.type = "macrotext"
-            attrs.macrotext = action.macrotext
+            macrotext = action.macrotext
         elseif action.spell then
-            attrs.type = "spell"
-            attrs.spell = action.spell
+            macrotext = "/cast " .. action.spell
         elseif type(action[1]) == "string" then
-            attrs.type = "macrotext"
-            attrs.macrotext = action[1]
+            macrotext = action[1]
         end
 
-        if next(attrs) then
+        if macrotext then
+            local step = { type = "macro", macrotext = macrotext }
             local repeat_count = tonumber(action.Repeat) or 1
             for _ = 1, repeat_count do
-                steps[#steps + 1] = attrs
+                steps[#steps + 1] = step
             end
         end
 
@@ -88,7 +89,7 @@ function EZMacro:CompileAction(action)
         elseif action.MS then
             clicks = math.max(1, math.floor(tonumber(action.MS) / 250))
         end
-        local pauseStep = { type = "macrotext", macrotext = "" }
+        local pauseStep = { type = "macro", macrotext = "" }
         for _ = 1, clicks do
             steps[#steps + 1] = pauseStep
         end
