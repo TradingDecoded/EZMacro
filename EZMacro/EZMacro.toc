@@ -1,0 +1,17 @@
+## Interface: 120001
+## Title: EZMacro
+## Notes: Simple GSE macro importer with one-click keybinding.
+## Author: Jimmy
+## Version: 1.0.0
+## SavedVariables: EZMacro_GlobalDB
+## SavedVariablesPerCharacter: EZMacro_CharDB
+
+embeds.xml
+
+Core\Init.lua
+Core\Decoder.lua
+Core\Engine.lua
+Validation\TalentCheck.lua
+UI\MainFrame.lua
+UI\ImportDialog.lua
+UI\KeyBindDialog.lua
