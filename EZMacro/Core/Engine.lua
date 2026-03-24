@@ -160,7 +160,7 @@ function EZMacro:CreateButton(macroName, steps)
     end
 
     local setupCode = string.format(
-        "local spelllist = newtable()\nlocal totalSteps = %d\n%s",
+        "spelllist = newtable()\ntotalSteps = %d\n%s",
         #steps,
         table.concat(stepLines, "\n")
     )
