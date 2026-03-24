@@ -20,7 +20,7 @@ function EZMacro:ShowImportDialog()
     end
 
     local desc = AceGUI:Create("Label")
-    desc:SetText("Paste a GSE macro string OR a raw Lua step table below.\nFor Lua tables, enter a macro name first.")
+    desc:SetText("Paste an EZMacro string, GSE macro string, or raw Lua step table.\nFor Lua tables, enter a macro name first.")
     desc:SetFullWidth(true)
     importFrame:AddChild(desc)
 
@@ -54,7 +54,9 @@ function EZMacro:ShowImportDialog()
 
         local ok, msg
         -- Detect format: GSE strings start with !GSE3!, Lua tables start with {
-        if text:sub(1, 5) == "!GSE3" then
+        if text:sub(1, 5) == "!EZM!" then
+            ok, msg = EZMacro:ImportEZMString(text)
+        elseif text:sub(1, 5) == "!GSE3" then
             ok, msg = EZMacro:ImportString(text)
         elseif text:sub(1, 1) == "{" then
             local name = strtrim(nameBox:GetText() or "")
@@ -64,7 +66,7 @@ function EZMacro:ShowImportDialog()
             end
             ok, msg = EZMacro:ImportLuaTable(name, text)
         else
-            EZMacro:Print("|cFFFF0000Unrecognized format. Paste a !GSE3! string or a Lua table starting with {|r")
+            EZMacro:Print("|cFFFF0000Unrecognized format. Paste an !EZM!, !GSE3!, or Lua table starting with {|r")
             return
         end
 
