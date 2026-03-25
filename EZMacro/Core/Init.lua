@@ -1,5 +1,5 @@
 local EZMacro = LibStub("AceAddon-3.0"):NewAddon("EZMacro", "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0")
-EZMacro.Version = "1.0.0"
+EZMacro.Version = "1.1.0"
 
 function EZMacro:OnInitialize()
     if not EZMacro_GlobalDB then
