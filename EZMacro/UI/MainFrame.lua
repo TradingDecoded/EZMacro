@@ -39,7 +39,7 @@ function EZMacro:ShowMainFrame()
     scrollContainer:AddChild(scroll)
 
     local importBtn = AceGUI:Create("Button")
-    importBtn:SetText("Import GSE Macro")
+    importBtn:SetText("Import Macro")
     importBtn:SetFullWidth(true)
     importBtn:SetCallback("OnClick", function()
         if InCombatLockdown() then

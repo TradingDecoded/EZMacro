@@ -59,7 +59,7 @@ function EZMacro:EncodeEZMString(macroName)
         formatVersion = 1,
         name = macroName,
         classID = data.classID or playerClassID,
-        specID = specID,
+        specID = data.specID or specID,
         talentLoadout = talentLoadout,
         steps = steps,
     }
