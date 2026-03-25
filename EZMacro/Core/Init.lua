@@ -73,11 +73,30 @@ function EZMacro:SlashCommand(input)
         self:ShowImportDialog()
     elseif cmd == "list" then
         self:ListMacros()
+    elseif cmd == "stop" then
+        self:StopMacro()
     elseif cmd == "reset" then
         StaticPopup_Show("EZMACRO_CONFIRM_RESET")
     else
-        self:Print("Usage: /ezm [import|list|reset]")
+        self:Print("Usage: /ezm [import|list|stop|reset]")
     end
+end
+
+--- Stop auto-attack, clear target, and reset all macro buttons to step 1.
+-- Helps drop combat at target dummies.
+function EZMacro:StopMacro()
+    -- Stop auto-attack (this is what keeps you in combat at dummies)
+    StopAttack()
+    -- Clear target so you don't re-engage
+    ClearTarget()
+    -- Reset all macro buttons back to step 1
+    for name, btn in pairs(self.Buttons) do
+        if not InCombatLockdown() then
+            btn:SetAttribute("step", 1)
+            btn:SetAttribute("stepped", false)
+        end
+    end
+    self:Print("Stopped. Auto-attack off, target cleared.")
 end
 
 function EZMacro:ListMacros()
