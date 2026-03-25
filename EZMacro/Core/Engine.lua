@@ -205,6 +205,8 @@ function EZMacro:CreateButton(macroName, steps)
 end
 
 --- Bind a key to a macro's secure button.
+-- Uses SetOverrideBindingClick (addon-safe) instead of SetBindingClick to avoid
+-- tainting WoW's secure binding system, which breaks summon accept, etc.
 function EZMacro:BindKey(macroName, key)
     if InCombatLockdown() then
         self:Print("Cannot bind keys during combat.")
@@ -218,13 +220,13 @@ function EZMacro:BindKey(macroName, key)
         return false
     end
 
-    -- Unbind any previous key for this macro
+    -- Clear any previous override binding for this macro
     local existing = EZMacro_CharDB.macros[macroName]
     if existing and existing.keybind then
-        SetBinding(existing.keybind)
+        SetOverrideBinding(btn, false, existing.keybind, nil)
     end
 
-    SetBindingClick(key, buttonName, "LeftButton")
+    SetOverrideBindingClick(btn, false, key, buttonName, "LeftButton")
     if EZMacro_CharDB.macros[macroName] then
         EZMacro_CharDB.macros[macroName].keybind = key
     end
@@ -236,9 +238,12 @@ end
 --- Unbind a macro's key.
 function EZMacro:UnbindKey(macroName)
     if InCombatLockdown() then return false end
+    local btn = self.Buttons[macroName]
     local entry = EZMacro_CharDB.macros[macroName]
     if entry and entry.keybind then
-        SetBinding(entry.keybind)
+        if btn then
+            SetOverrideBinding(btn, false, entry.keybind, nil)
+        end
         entry.keybind = nil
     end
     return true
@@ -249,7 +254,7 @@ function EZMacro:RestoreKeybinds()
     if InCombatLockdown() then return end
     for name, data in pairs(EZMacro_CharDB.macros) do
         if data.keybind and self.Buttons[name] then
-            SetBindingClick(data.keybind, SanitizeButtonName(name), "LeftButton")
+            SetOverrideBindingClick(self.Buttons[name], false, data.keybind, SanitizeButtonName(name), "LeftButton")
         end
     end
 end
@@ -282,6 +287,7 @@ function EZMacro:DeleteMacro(macroName)
     self:UnbindKey(macroName)
     local btn = self.Buttons[macroName]
     if btn then
+        ClearOverrideBindings(btn)
         btn:Hide()
         btn:SetAttribute("type", nil)
     end
