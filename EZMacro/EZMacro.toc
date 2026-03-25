@@ -3,6 +3,7 @@
 ## Notes: Simple GSE macro importer with one-click keybinding.
 ## Author: Jimmy
 ## Version: 1.0.0
+## AddonCompartmentFunc: EZMacro_OnAddonCompartmentClick
 ## SavedVariables: EZMacro_GlobalDB
 ## SavedVariablesPerCharacter: EZMacro_CharDB
 
@@ -16,3 +17,4 @@ Validation\TalentCheck.lua
 UI\MainFrame.lua
 UI\ImportDialog.lua
 UI\KeyBindDialog.lua
+UI\ExportDialog.lua

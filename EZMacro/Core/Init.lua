@@ -122,3 +122,9 @@ StaticPopupDialogs["EZMACRO_CONFIRM_RESET"] = {
     whileDead = true,
     hideOnEscape = true,
 }
+
+--- Addon Compartment click handler (minimap addon dropdown).
+function EZMacro_OnAddonCompartmentClick(addonName, buttonName)
+    local EZM = LibStub("AceAddon-3.0"):GetAddon("EZMacro")
+    EZM:ToggleMainFrame()
+end
