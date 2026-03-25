@@ -125,6 +125,14 @@ function EZMacro:AddMacroRow(parent, name, data)
         row:AddChild(loadBtn)
     end
 
+    local exportBtn = AceGUI:Create("Button")
+    exportBtn:SetText("Export")
+    exportBtn:SetWidth(80)
+    exportBtn:SetCallback("OnClick", function()
+        EZMacro:ShowExportDialog(name)
+    end)
+    row:AddChild(exportBtn)
+
     local bindBtn = AceGUI:Create("Button")
     bindBtn:SetText("Bind Key")
     bindBtn:SetWidth(90)
