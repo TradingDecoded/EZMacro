@@ -143,6 +143,7 @@ function EZMacro:CreateButton(macroName, steps)
 
     -- Set initial attributes from first step
     btn:SetAttribute("step", 1)
+    btn:SetAttribute("stepped", false)
     for k, v in pairs(steps[1]) do
         btn:SetAttribute(k, v)
     end
@@ -170,6 +171,13 @@ function EZMacro:CreateButton(macroName, steps)
     -- Only wrap the OnClick handler on new button creation to avoid stacking.
     if isNewButton then
         local clickHandler = [=[
+            -- Only execute on key down, skip key up (prevents double-fire per keypress)
+            if self:GetAttribute("stepped") then
+                self:SetAttribute("stepped", false)
+                return nil
+            end
+            self:SetAttribute("stepped", true)
+
             local step = tonumber(self:GetAttribute("step") or 1)
 
             if not spelllist or not spelllist[step] then return end
